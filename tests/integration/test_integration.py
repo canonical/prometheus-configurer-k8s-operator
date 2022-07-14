@@ -82,8 +82,9 @@ class TestPrometheusConfigurerOperatorCharm:
         self, ops_test: OpsTest, setup
     ):
         dummy_http_server_ip = await _unit_address(ops_test, PROMETHEUS_CONFIGURER_APP_NAME, 0)
-        # status = await ops_test.model.get_status()
-        # model_name = status["model"]["name"]
+        status = await ops_test.model.get_status()
+        model_name = status["model"]["name"]
+        model_uuid = ops_test.model.uuid
         test_rule_json = {
             "alert": f"{TEST_ALERT_NAME}",
             "expr": "process_cpu_seconds_total > 0.12",
@@ -91,30 +92,30 @@ class TestPrometheusConfigurerOperatorCharm:
             "labels": {"severity": "Low"},
             "annotations": {"summary": "Rule summary.", "description": "Rule description."},
         }
-        # expected_prometheus_rules = {
-        #     "alerts": [],
-        #     "annotations": {
-        #         "description": "Rule description.",
-        #         "summary": "Rule summary."
-        #     },
-        #     "duration": 0,
-        #     "evaluationTime": 0,
-        #     "health": "unknown",
-        #     "labels": {
-        #         "juju_application": f"{PROMETHEUS_CONFIGURER_APP_NAME}",
-        #         "juju_charm": f"{PROMETHEUS_CHARM_NAME}",
-        #         "juju_model": f"{model_name}",
-        #         "juju_model_uuid": ops_test.model.uuid,
-        #         "networkID": f"{TEST_TENANT}",
-        #         "severity": "Low"
-        #     },
-        #     "lastEvaluation": "0001-01-01T00:00:00Z",
-        #     "name": f"{TEST_ALERT_NAME}",
-        #     "query": f'process_cpu_seconds_total{{juju_application="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_charm="{PROMETHEUS_CHARM_NAME}",juju_model="{model_name}",juju_model_uuid="{ops_test.model.uuid}",networkID="{TEST_TENANT}"}} '  # noqa: E501, W505
-        #              "> 0.12",
-        #     "state": "inactive",
-        #     "type": "alerting"
-        # }
+        expected_prometheus_rules = {
+            "alerts": [],
+            "annotations": {
+                "description": "Rule description.",
+                "summary": "Rule summary."
+            },
+            "duration": 0,
+            "evaluationTime": 0,
+            "health": "unknown",
+            "labels": {
+                "juju_application": f"{PROMETHEUS_CONFIGURER_APP_NAME}",
+                "juju_charm": f"{PROMETHEUS_CONFIGURER_APP_NAME}",
+                "juju_model": f"{model_name}",
+                "juju_model_uuid": f"{model_uuid}",
+                "networkID": f"{TEST_TENANT}",
+                "severity": "Low"
+            },
+            "lastEvaluation": "0001-01-01T00:00:00Z",
+            "name": f"{TEST_ALERT_NAME}",
+            "query": f'process_cpu_seconds_total{{juju_application="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_charm="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_model="{model_name}",juju_model_uuid="{model_uuid}",networkID="{TEST_TENANT}"}} '  # noqa: E501
+                     "> 0.12",
+            "state": "inactive",
+            "type": "alerting"
+        }
 
         server_response = requests.post(
             f"http://{dummy_http_server_ip}:9100/{TEST_TENANT}/alert", json=test_rule_json
@@ -126,7 +127,7 @@ class TestPrometheusConfigurerOperatorCharm:
         prometheus_rules = await _get_prometheus_rules(ops_test, PROMETHEUS_APP_NAME, 0)
 
         assert len(prometheus_rules) == 1
-        # assert prometheus_rules[0]["rules"][0] == expected_prometheus_rules
+        assert prometheus_rules[0]["rules"][0] == expected_prometheus_rules
 
     @pytest.mark.abort_on_fail
     async def test_given_prometheus_configurer_with_existing_rule_when_get_alert_rules_then_expected_alert_rules_are_returned(  # noqa: E501
