@@ -94,10 +94,7 @@ class TestPrometheusConfigurerOperatorCharm:
         }
         expected_prometheus_rules = {
             "alerts": [],
-            "annotations": {
-                "description": "Rule description.",
-                "summary": "Rule summary."
-            },
+            "annotations": {"description": "Rule description.", "summary": "Rule summary."},
             "duration": 0,
             "evaluationTime": 0,
             "health": "unknown",
@@ -107,14 +104,14 @@ class TestPrometheusConfigurerOperatorCharm:
                 "juju_model": f"{model_name}",
                 "juju_model_uuid": f"{model_uuid}",
                 "networkID": f"{TEST_TENANT}",
-                "severity": "Low"
+                "severity": "Low",
             },
             "lastEvaluation": "0001-01-01T00:00:00Z",
             "name": f"{TEST_ALERT_NAME}",
             "query": f'process_cpu_seconds_total{{juju_application="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_charm="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_model="{model_name}",juju_model_uuid="{model_uuid}",networkID="{TEST_TENANT}"}} '  # noqa: E501
-                     "> 0.12",
+            "> 0.12",
             "state": "inactive",
-            "type": "alerting"
+            "type": "alerting",
         }
 
         server_response = requests.post(
