@@ -12,7 +12,7 @@ description: |
   the alerting rules to the Prometheus Server inside the Juju relation data bag.
   
   Full description of the API is available in 
-  https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger-v1.yml.
+  https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger.yaml.
 
 containers:
   prometheus-configurer:

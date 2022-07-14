@@ -80,9 +80,12 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
         alert_rules = AlertRules(topology=topology)
         alert_rules.add_path(self.RULES_DIR, recursive=True)
         alert_rules_as_dict = alert_rules.as_dict()
+        alert_rules_content = (
+            alert_rules_as_dict if alert_rules_as_dict["groups"][0]["rules"] else []
+        )
         if alert_rules_as_dict:
             prometheus_relation = self.model.get_relation("prometheus")
-            prometheus_relation.data[self.app]["alert_rules"] = json.dumps(alert_rules_as_dict)  # type: ignore[union-attr]  # noqa: E501
+            prometheus_relation.data[self.app]["alert_rules"] = json.dumps(alert_rules_content)  # type: ignore[union-attr]  # noqa: E501
 
     @property
     def _prometheus_configurer_layer(self) -> Layer:

@@ -60,9 +60,21 @@ curl -X POST http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/alert
   -d '{"alert": "CPUOverUse", "expr": "process_cpu_seconds_total > 0.12", "for": "0m", "labels": {"severity": "Low"}, "annotations": {"summary": "Rule summary.", "description": "Rule description."}}'
 ```
 
+To get tenant's alert rules:
+
+```bash
+curl -X GET http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/alert
+```
+
+To delete tenant's alert rule:
+
+```bash
+curl -X DELETE http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/alert?alert_name=<RULE_NAME>
+```
+
 ## OCI Images
 
 - [facebookincubator/prometheus-configurer](https://hub.docker.com/r/facebookincubator/prometheus-configurer)
 
 [prometheus-k8s]: https://github.com/canonical/prometheus-k8s-operator
-[github]: https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger-v1.yml
+[github]: https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger.yaml

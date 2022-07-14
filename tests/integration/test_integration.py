@@ -81,7 +81,9 @@ class TestPrometheusConfigurerOperatorCharm:
     async def test_given_prometheus_configurer_ready_when_new_alert_rule_created_then_prometheus_alert_rules_are_updated(  # noqa: E501
         self, ops_test: OpsTest, setup
     ):
-        dummy_http_server_ip = await _unit_address(ops_test, PROMETHEUS_CONFIGURER_APP_NAME, 0)
+        prometheus_configurer_server_ip = await _unit_address(
+            ops_test, PROMETHEUS_CONFIGURER_APP_NAME, 0
+        )
         status = await ops_test.model.get_status()
         model_name = status["model"]["name"]
         model_uuid = ops_test.model.uuid
@@ -115,12 +117,13 @@ class TestPrometheusConfigurerOperatorCharm:
         }
 
         server_response = requests.post(
-            f"http://{dummy_http_server_ip}:9100/{TEST_TENANT}/alert", json=test_rule_json
+            f"http://{prometheus_configurer_server_ip}:9100/{TEST_TENANT}/alert",
+            json=test_rule_json,
         )
         assert server_response.status_code == 200
 
         # Prometheus needs a couple of seconds to reload configuration
-        time.sleep(5)
+        time.sleep(2)
         prometheus_rules = await _get_prometheus_rules(ops_test, PROMETHEUS_APP_NAME, 0)
 
         assert len(prometheus_rules) == 1
@@ -130,7 +133,9 @@ class TestPrometheusConfigurerOperatorCharm:
     async def test_given_prometheus_configurer_with_existing_rule_when_get_alert_rules_then_expected_alert_rules_are_returned(  # noqa: E501
         self, ops_test: OpsTest, setup
     ):
-        dummy_http_server_ip = await _unit_address(ops_test, PROMETHEUS_CONFIGURER_APP_NAME, 0)
+        prometheus_configurer_server_ip = await _unit_address(
+            ops_test, PROMETHEUS_CONFIGURER_APP_NAME, 0
+        )
         expected_response = {
             "alert": f"{TEST_ALERT_NAME}",
             "expr": f'process_cpu_seconds_total{{networkID="{TEST_TENANT}"}} > 0.12',
@@ -139,10 +144,40 @@ class TestPrometheusConfigurerOperatorCharm:
             "annotations": {"description": "Rule description.", "summary": "Rule summary."},
         }
 
-        server_response = requests.get(f"http://{dummy_http_server_ip}:9100/{TEST_TENANT}/alert")
+        server_response = requests.get(
+            f"http://{prometheus_configurer_server_ip}:9100/{TEST_TENANT}/alert"
+        )
         assert server_response.status_code == 200
 
         assert server_response.json()[0] == expected_response
+
+    @pytest.mark.abort_on_fail
+    async def test_given_prometheus_configurer_with_existing_rule_when_delete_alert_rule_then_prometheus_configurer_has_no_rules(  # noqa: E501
+        self, ops_test: OpsTest, setup
+    ):
+        prometheus_configurer_server_ip = await _unit_address(
+            ops_test, PROMETHEUS_CONFIGURER_APP_NAME, 0
+        )
+        server_response = requests.delete(
+            f"http://{prometheus_configurer_server_ip}:9100/{TEST_TENANT}/alert?alert_name={TEST_ALERT_NAME}"  # noqa: E501, W505
+        )
+        assert server_response.status_code == 204
+        # 2 seconds for the Prometheus Configurer to do what needs to process the request
+        time.sleep(2)
+
+        server_response = requests.get(
+            f"http://{prometheus_configurer_server_ip}:9100/{TEST_TENANT}/alert"
+        )
+        assert server_response.status_code == 200
+
+        assert server_response.json() == []
+
+    @pytest.mark.abort_on_fail
+    async def test_given_prometheus_configurer_with_deleted_rule_when_get_then_prometheus_has_no_rules(  # noqa: E501
+        self, ops_test: OpsTest, setup
+    ):
+        prometheus_rules = await _get_prometheus_rules(ops_test, PROMETHEUS_APP_NAME, 0)
+        assert prometheus_rules == []
 
     @staticmethod
     async def _deploy_prometheus_k8s(ops_test: OpsTest):
