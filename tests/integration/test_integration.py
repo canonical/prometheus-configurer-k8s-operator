@@ -123,7 +123,7 @@ class TestPrometheusConfigurerOperatorCharm:
         assert server_response.status_code == 200
 
         # Prometheus needs a couple of seconds to reload configuration
-        time.sleep(3)
+        time.sleep(5)
         prometheus_rules = await _get_prometheus_rules(ops_test, PROMETHEUS_APP_NAME, 0)
 
         assert len(prometheus_rules) == 1
@@ -163,7 +163,7 @@ class TestPrometheusConfigurerOperatorCharm:
         )
         assert server_response.status_code == 204
         # 2 seconds for the Prometheus Configurer to do what needs to process the request
-        time.sleep(3)
+        time.sleep(5)
 
         server_response = requests.get(
             f"http://{prometheus_configurer_server_ip}:9100/{TEST_TENANT}/alert"
