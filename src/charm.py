@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 class PrometheusConfigurerOperatorCharm(CharmBase):
     RULES_DIR = "/etc/prometheus/rules"
     DUMMY_SERVER_PORT = 9090
-    REQUIRED_RELATIONS = ["prometheus"]
 
     on = AlertRulesChangedCharmEvents()
 
