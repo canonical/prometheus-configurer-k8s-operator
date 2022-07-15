@@ -107,7 +107,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                         f"-port={str(self._prometheus_configurer_port)} "
                         f"-rules-dir={self.RULES_DIR}/ "
                         f"-prometheusURL=127.0.0.1:{self.DUMMY_SERVER_PORT} "
-                        "-multitenant-label=networkID "
+                        f'-multitenant-label={self.model.config.get("multitenant_label")} '
                         "-restrict-queries",
                     }
                 },

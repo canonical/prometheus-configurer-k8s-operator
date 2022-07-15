@@ -71,11 +71,10 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
             "Waiting for prometheus-configurer container to be ready"
         )
 
-    @patch("charm.PrometheusConfigurerOperatorCharm.model")
     def test_given_prometheus_relation_created_and_container_ready_when_pebble_ready_then_pebble_plan_is_updated_with_correct_pebble_layer(  # noqa: E501
-        self, patched_relations_created
+        self,
     ):
-        patched_relations_created.return_value = True
+        self.harness.add_relation("prometheus", "prometheus-k8s")
         expected_plan = {
             "services": {
                 "prometheus-configurer": {
