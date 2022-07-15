@@ -41,7 +41,7 @@ class AlertRulesDirWatcher(Object):
         self._rules_dir = rules_dir
 
     def start_watchdog(self):
-        """Starts watchdog."""
+        """Wraps watchdog in a new background process."""
         logger.info("Starting alert rules watchdog.")
 
         # We need to trick Juju into thinking that we are not running
@@ -67,14 +67,14 @@ class AlertRulesDirWatcher(Object):
         logger.info(f"Started alert rules watchdog process with PID {pid}.")
 
 
-def dispatch(run_cmd, unit, charm_dir):
+def dispatch(run_cmd: str, unit: str, charm_dir: str):
     """Fires alert_rules_changed Juju event."""
     dispatch_sub_cmd = "JUJU_DISPATCH_PATH=hooks/alert_rules_changed {}/dispatch"
     subprocess.run([run_cmd, "-u", unit, dispatch_sub_cmd.format(charm_dir)])
 
 
 class Handler(FileSystemEventHandler):
-    def __init__(self, run_cmd, unit, charm_dir):
+    def __init__(self, run_cmd: str, unit: str, charm_dir: str):
         self.run_cmd = run_cmd
         self.unit = unit
         self.charm_dir = charm_dir
@@ -85,7 +85,7 @@ class Handler(FileSystemEventHandler):
 
 
 def main():
-    """Starts the actual watchdog process."""
+    """Starts watchdog."""
     rules_dir, run_cmd, unit, charm_dir = sys.argv[1:]
 
     observer = Observer()

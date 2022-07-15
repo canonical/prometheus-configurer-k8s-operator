@@ -12,6 +12,9 @@ The Prometheus Configurer Charmed Operator provides an HTTP-based API for managi
 
 Full description of the API is available in [github].
 
+[prometheus-k8s]: https://github.com/canonical/prometheus-k8s-operator
+[github]: https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger.yaml
+
 ## Usage
 
 ### Deployment
@@ -75,6 +78,3 @@ curl -X DELETE http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/ale
 ## OCI Images
 
 - [facebookincubator/prometheus-configurer](https://hub.docker.com/r/facebookincubator/prometheus-configurer)
-
-[prometheus-k8s]: https://github.com/canonical/prometheus-k8s-operator
-[github]: https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger.yaml

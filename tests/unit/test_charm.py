@@ -56,10 +56,10 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         self.harness.container_pebble_ready("prometheus-configurer")
 
         assert self.harness.charm.unit.status == BlockedStatus(
-            "Waiting for relation(s) to be created: prometheus"
+            "Waiting for prometheus relation to be created"
         )
 
-    @patch("charm.PrometheusConfigurerOperatorCharm._relations_created", new_callable=PropertyMock)
+    @patch("charm.PrometheusConfigurerOperatorCharm.model")
     def test_given_prometheus_relation_created_but_container_not_yet_ready_when_pebble_ready_then_charm_goes_to_waiting_state(  # noqa: E501
         self, patched_relations_created
     ):
@@ -71,7 +71,7 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
             "Waiting for prometheus-configurer container to be ready"
         )
 
-    @patch("charm.PrometheusConfigurerOperatorCharm._relations_created", new_callable=PropertyMock)
+    @patch("charm.PrometheusConfigurerOperatorCharm.model")
     def test_given_prometheus_relation_created_and_container_ready_when_pebble_ready_then_pebble_plan_is_updated_with_correct_pebble_layer(  # noqa: E501
         self, patched_relations_created
     ):
@@ -95,7 +95,7 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("prometheus-configurer").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch("charm.PrometheusConfigurerOperatorCharm._relations_created", new_callable=PropertyMock)
+    @patch("charm.PrometheusConfigurerOperatorCharm.model")
     def test_given_prometheus_relation_created_and_container_ready_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
         self, patched_relations_created
     ):

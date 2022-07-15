@@ -50,7 +50,8 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
         """Checks whether all conditions to start Prometheus Configurer are met and, if yes,
         triggers start of the prometheus-configurer service.
         """
-        if not self._relations_created:
+        if not self.model.get_relation("prometheus"):
+            self.unit.status = BlockedStatus("Waiting for prometheus relation to be created")
             event.defer()
             return
         if self._container.can_connect():
@@ -112,18 +113,6 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                 },
             }
         )
-
-    @property
-    def _relations_created(self) -> bool:
-        if missing_relations := [
-            relation
-            for relation in self.REQUIRED_RELATIONS
-            if not self.model.get_relation(relation)
-        ]:
-            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
-            self.unit.status = BlockedStatus(msg)
-            return False
-        return True
 
 
 if __name__ == "__main__":

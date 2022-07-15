@@ -35,7 +35,7 @@ class DummyHTTPServer(Object):
         self._port = port
 
     def start_server(self):
-        """Starts dummy HTTP server in a new process."""
+        """Wraps the dummy HTTP server in a new background process."""
         logger.info(f"Starting dummy HTTP server on port {self._port}.")
 
         # We need to trick Juju into thinking that we are not running
@@ -67,7 +67,7 @@ class DummyServer(BaseHTTPRequestHandler):
 
 
 def main():
-    """Starts the actual HTTP server."""
+    """Starts the HTTP server."""
     port = sys.argv[1]
     server_address = ("", int(port))
     httpd = HTTPServer(server_address, DummyServer)
