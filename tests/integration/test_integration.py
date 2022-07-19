@@ -18,6 +18,7 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PROMETHEUS_CONFIGURER_APP_NAME = METADATA["name"]
 PROMETHEUS_APP_NAME = PROMETHEUS_CHARM_NAME = "prometheus-k8s"
 WAIT_FOR_STATUS_TIMEOUT = 1 * 60
+DUMMY_HTTP_SERVER_PORT = 8080
 TEST_TENANT = "test_tenant"
 TEST_ALERT_NAME = "CPUOverUse"
 
@@ -67,7 +68,9 @@ class TestPrometheusConfigurerOperatorCharm:
         self, ops_test: OpsTest, setup
     ):
         dummy_http_server_ip = await _unit_address(ops_test, PROMETHEUS_CONFIGURER_APP_NAME, 0)
-        dummy_server_response = requests.post(f"http://{dummy_http_server_ip}:9090")
+        dummy_server_response = requests.post(
+            f"http://{dummy_http_server_ip}:{DUMMY_HTTP_SERVER_PORT}"
+        )
         assert dummy_server_response.status_code == 200
 
     @pytest.mark.abort_on_fail
