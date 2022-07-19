@@ -91,12 +91,12 @@ class JujuTopology:
     """JujuTopology is used for storing, generating and formatting juju topology information."""
 
     def __init__(
-            self,
-            model: str,
-            model_uuid: str,
-            application: str,
-            unit: str = None,
-            charm_name: str = None,
+        self,
+        model: str,
+        model_uuid: str,
+        application: str,
+        unit: str = None,
+        charm_name: str = None,
     ):
         """Build a JujuTopology object.
 
@@ -193,7 +193,7 @@ class JujuTopology:
         )
 
     def as_dict(
-            self, *, remapped_keys: Dict[str, str] = None, excluded_keys: List[str] = None
+        self, *, remapped_keys: Dict[str, str] = None, excluded_keys: List[str] = None
     ) -> OrderedDict:
         """Format the topology information into an ordered dict.
 

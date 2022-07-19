@@ -13,6 +13,16 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from charm import PrometheusConfigurerOperatorCharm
 
 testing.SIMULATE_CAN_CONNECT = True
+TEST_MULTITENANT_LABEL = "some_test_label"
+TEST_CONFIG = f"""options:
+  multitenant_label:
+    type: string
+    description: |
+      Prometheus Configurer has been designed to support multiple tenants. This label can be used
+      to restrict the alerting rules in Prometheus, so that each rule can only be triggered by
+      metrics with matching label.
+    default: {TEST_MULTITENANT_LABEL}
+"""
 
 
 class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
@@ -21,35 +31,23 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         lambda charm, ports: None,
     )
     def setUp(self):
-        self.harness = testing.Harness(PrometheusConfigurerOperatorCharm)
+        self.harness = testing.Harness(PrometheusConfigurerOperatorCharm, config=TEST_CONFIG)
         self.addCleanup(self.harness.cleanup)
         self.harness.set_leader(True)
         self.harness.begin()
 
     @patch("charm.AlertRulesDirWatcher")
     @patch("charm.PrometheusConfigurerOperatorCharm.RULES_DIR", new_callable=PropertyMock)
-    @patch("charm.DummyHTTPServer", Mock())
-    def test_given_rules_directory_when_install_event_emitted_then_watchdog_starts_watching_given_rules_directory(  # noqa: E501
+    def test_given_rules_directory_when_pebble_ready_then_watchdog_starts_watching_given_rules_directory(  # noqa: E501
         self, patched_rules_dir, patched_alert_rules_dir_watcher
     ):
         test_rules_dir = "/test/rules/dir"
         patched_rules_dir.return_value = test_rules_dir
-        self.harness.charm.on.install.emit()
+        self.harness.container_pebble_ready("prometheus-configurer")
 
         patched_alert_rules_dir_watcher.assert_called_with(self.harness.charm, test_rules_dir)
 
-    @patch("charm.DummyHTTPServer")
-    @patch("charm.PrometheusConfigurerOperatorCharm.DUMMY_SERVER_PORT", new_callable=PropertyMock)
     @patch("charm.AlertRulesDirWatcher", Mock())
-    def test_given_prometheus_port_when_install_event_emitted_then_dummy_http_server_is_started_on_correct_port(  # noqa: E501
-        self, patched_dummy_server_port, patched_dummy_http_server
-    ):
-        test_dummy_server_port = 1234
-        patched_dummy_server_port.return_value = test_dummy_server_port
-        self.harness.charm.on.install.emit()
-
-        patched_dummy_http_server.assert_called_with(self.harness.charm, test_dummy_server_port)
-
     def test_given_prometheus_relation_not_created_when_pebble_ready_then_charm_goes_to_blocked_state(  # noqa: E501
         self,
     ):
@@ -60,7 +58,8 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         )
 
     @patch("charm.PrometheusConfigurerOperatorCharm.model")
-    def test_given_prometheus_relation_created_but_container_not_yet_ready_when_pebble_ready_then_charm_goes_to_waiting_state(  # noqa: E501
+    @patch("charm.AlertRulesDirWatcher", Mock())
+    def test_given_prometheus_relation_created_but_prometheus_configurer_container_not_yet_ready_when_pebble_ready_then_charm_goes_to_waiting_state(  # noqa: E501
         self, patched_relations_created
     ):
         patched_relations_created.return_value = True
@@ -71,9 +70,35 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
             "Waiting for prometheus-configurer container to be ready"
         )
 
-    def test_given_prometheus_relation_created_and_container_ready_when_pebble_ready_then_pebble_plan_is_updated_with_correct_pebble_layer(  # noqa: E501
+    @patch("charm.PrometheusConfigurerOperatorCharm.RULES_DIR", new_callable=PropertyMock)
+    @patch(
+        "charm.PrometheusConfigurerOperatorCharm.PROMETHEUS_CONFIGURER_PORT",
+        new_callable=PropertyMock,
+    )
+    @patch(
+        "charm.PrometheusConfigurerOperatorCharm._prometheus_server_host",
+        new_callable=PropertyMock,
+    )
+    @patch(
+        "charm.PrometheusConfigurerOperatorCharm._prometheus_server_port",
+        new_callable=PropertyMock,
+    )
+    @patch("charm.AlertRulesDirWatcher", Mock())
+    def test_given_prometheus_relation_created_and_prometheus_configurer_container_ready_when_pebble_ready_then_pebble_plan_is_updated_with_correct_pebble_layer(  # noqa: E501
         self,
+        patched_prometheus_server_port,
+        patched_prometheus_server_host,
+        patched_prometheus_configurer_port,
+        patched_rules_dir,
     ):
+        test_prometheus_server_port = 4321
+        test_prometheus_server_host = "testhost"
+        test_prometheus_configurer_port = 1234
+        test_rules_dir = "/test/rules/dir"
+        patched_prometheus_server_port.return_value = test_prometheus_server_port
+        patched_prometheus_server_host.return_value = test_prometheus_server_host
+        patched_prometheus_configurer_port.return_value = test_prometheus_configurer_port
+        patched_rules_dir.return_value = test_rules_dir
         self.harness.add_relation("prometheus", "prometheus-k8s")
         expected_plan = {
             "services": {
@@ -81,10 +106,10 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
                     "override": "replace",
                     "startup": "enabled",
                     "command": "prometheus_configurer "
-                    "-port=9100 "
-                    "-rules-dir=/etc/prometheus/rules/ "
-                    "-prometheusURL=127.0.0.1:9090 "
-                    "-multitenant-label=networkID "
+                    f"-port={test_prometheus_configurer_port} "
+                    f"-rules-dir={test_rules_dir}/ "
+                    f"-prometheusURL={test_prometheus_server_host}:{test_prometheus_server_port} "
+                    f"-multitenant-label={TEST_MULTITENANT_LABEL} "
                     "-restrict-queries",
                 }
             }
@@ -94,8 +119,26 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("prometheus-configurer").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
+    def test_given_dummy_http_server_container_ready_when_pebble_ready_then_pebble_plan_is_updated_with_correct_pebble_layer(  # noqa: E501
+        self,
+    ):
+        expected_plan = {
+            "services": {
+                "dummy-http-server": {
+                    "override": "replace",
+                    "startup": "enabled",
+                    "command": "nginx",
+                }
+            }
+        }
+        self.harness.container_pebble_ready("dummy-http-server")
+
+        updated_plan = self.harness.get_container_pebble_plan("dummy-http-server").to_dict()
+        self.assertEqual(expected_plan, updated_plan)
+
     @patch("charm.PrometheusConfigurerOperatorCharm.model")
-    def test_given_prometheus_relation_created_and_container_ready_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
+    @patch("charm.AlertRulesDirWatcher", Mock())
+    def test_given_prometheus_relation_created_and_prometheus_configurer_container_ready_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
         self, patched_relations_created
     ):
         patched_relations_created.return_value = True

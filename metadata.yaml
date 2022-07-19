@@ -20,6 +20,8 @@ containers:
     mounts:
       - storage: rules
         location: /etc/prometheus/rules
+  dummy-http-server:
+    resource: dummy-http-server-image
 
 requires:
   prometheus:
@@ -35,3 +37,7 @@ resources:
     type: oci-image
     description: Container image for Prometheus Configurer
     upstream-source: docker.io/facebookincubator/prometheus-configurer:1.0.4
+  dummy-http-server-image:
+    type: oci-image
+    description: Container image for the dummy HTTP server
+    upstream-source: ghcr.io/canonical/200-ok:main

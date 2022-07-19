@@ -162,7 +162,7 @@ class TestPrometheusConfigurerOperatorCharm:
             f"http://{prometheus_configurer_server_ip}:9100/{TEST_TENANT}/alert?alert_name={TEST_ALERT_NAME}"  # noqa: E501, W505
         )
         assert server_response.status_code == 204
-        # 2 seconds for the Prometheus Configurer to do what needs to process the request
+        # 5 seconds for the Prometheus Configurer to do what needs to process the request
         time.sleep(5)
 
         server_response = requests.get(
