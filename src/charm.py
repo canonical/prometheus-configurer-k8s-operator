@@ -13,7 +13,13 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
 from charms.prometheus_k8s.v0.prometheus_remote_write import AlertRules
 from ops.charm import CharmBase, PebbleReadyEvent
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    WaitingStatus,
+)
 from ops.pebble import Layer
 
 from rules_dir_watcher import AlertRulesChangedCharmEvents, AlertRulesDirWatcher
@@ -31,11 +37,15 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self._container_name = self._layer_name = self._service_name = "prometheus-configurer"
+        self._prometheus_configurer_container_name = (
+            self._prometheus_configurer_layer_name
+        ) = self._prometheus_configurer_service_name = "prometheus-configurer"
         self._dummy_http_server_container_name = (
             self._dummy_http_server_layer_name
         ) = self._dummy_http_server_service_name = "dummy-http-server"
-        self._container = self.unit.get_container(self._container_name)
+        self._prometheus_configurer_container = self.unit.get_container(
+            self._prometheus_configurer_container_name
+        )
         self._dummy_http_server_container = self.unit.get_container(
             self._dummy_http_server_container_name
         )
@@ -55,7 +65,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
         self.framework.observe(
             self.on.dummy_http_server_pebble_ready, self._on_dummy_http_server_pebble_ready
         )
-        self.framework.observe(self.on.alert_rules_changed, self._push_alert_rules)
+        self.framework.observe(self.on.alert_rules_changed, self._on_alert_rules_changed)
 
     def _on_prometheus_configurer_pebble_ready(self, event: PebbleReadyEvent):
         """Checks whether all conditions to start Prometheus Configurer are met and, if yes,
@@ -67,14 +77,18 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
             self.unit.status = BlockedStatus("Waiting for prometheus relation to be created")
             event.defer()
             return
-        if self._container.can_connect():
-            self._start_prometheus_configurer()
-            self.unit.status = ActiveStatus()
-        else:
+        if not self._prometheus_configurer_container.can_connect():
             self.unit.status = WaitingStatus(
-                f"Waiting for {self._container_name} container to be ready"
+                f"Waiting for {self._prometheus_configurer_container_name} container to be ready"
             )
             event.defer()
+            return
+        if not self._dummy_http_server_running:
+            self.unit.status = WaitingStatus("Waiting for the dummy HTTP server to be ready")
+            event.defer()
+            return
+        self._start_prometheus_configurer()
+        self.unit.status = ActiveStatus()
 
     def _on_dummy_http_server_pebble_ready(self, event: PebbleReadyEvent):
         if self._dummy_http_server_container.can_connect():
@@ -87,15 +101,17 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
 
     def _start_prometheus_configurer(self):
         """Starts Prometheus Configurer service."""
-        plan = self._container.get_plan()
+        plan = self._prometheus_configurer_container.get_plan()
         layer = self._prometheus_configurer_layer
         if plan.services != layer.services:
             self.unit.status = MaintenanceStatus(
-                f"Configuring pebble layer for {self._service_name}"
+                f"Configuring pebble layer for {self._prometheus_configurer_service_name}"
             )
-            self._container.add_layer(self._container_name, layer, combine=True)
-            self._container.restart(self._service_name)
-            logger.info(f"Restarted container {self._service_name}")
+            self._prometheus_configurer_container.add_layer(
+                self._prometheus_configurer_container_name, layer, combine=True
+            )
+            self._prometheus_configurer_container.restart(self._prometheus_configurer_service_name)
+            logger.info(f"Restarted container {self._prometheus_configurer_service_name}")
 
     def _start_dummy_http_server(self):
         """Starts Prometheus Configurer service."""
@@ -111,7 +127,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
             self._dummy_http_server_container.restart(self._dummy_http_server_service_name)
             logger.info(f"Restarted container {self._dummy_http_server_service_name}")
 
-    def _push_alert_rules(self, _):
+    def _on_alert_rules_changed(self, _):
         """Pushes alert rules to Prometheus through the relation data bag."""
         topology = JujuTopology.from_charm(self)
         alert_rules = AlertRules(topology=topology)
@@ -136,14 +152,14 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                 "summary": "Prometheus Configurer pebble layer",
                 "description": "Pebble layer configuration for Prometheus Configurer",
                 "services": {
-                    self._service_name: {
+                    self._prometheus_configurer_service_name: {
                         "override": "replace",
                         "startup": "enabled",
                         "command": "prometheus_configurer "
                         f"-port={str(self.PROMETHEUS_CONFIGURER_PORT)} "
                         f"-rules-dir={self.RULES_DIR}/ "
                         "-prometheusURL="
-                        f"{self._prometheus_server_host}:{self._prometheus_server_port} "
+                        f"{self.DUMMY_HTTP_SERVER_HOST}:{self.DUMMY_HTTP_SERVER_PORT} "
                         f'-multitenant-label={self.model.config.get("multitenant_label")} '
                         "-restrict-queries",
                     }
@@ -173,18 +189,12 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
         )
 
     @property
-    def _prometheus_server_host(self) -> str:
-        """Returns Prometheus Server's hostname. If none was set in the charm's config,
-        built-in dummy HTTP server will be used.
-        """
-        return self.model.config.get("prometheus_server_host") or self.DUMMY_HTTP_SERVER_HOST
-
-    @property
-    def _prometheus_server_port(self) -> int:
-        """Returns Prometheus Server's port. If none was set in the charm's config,
-        built-in dummy HTTP server will be used.
-        """
-        return int(self.model.config.get("prometheus_server_port")) or self.DUMMY_HTTP_SERVER_PORT  # type: ignore[arg-type]  # noqa: E501
+    def _dummy_http_server_running(self) -> bool:
+        try:
+            self._dummy_http_server_container.get_service(self._dummy_http_server_service_name)
+            return True
+        except ModelError:
+            return False
 
 
 if __name__ == "__main__":

@@ -57,17 +57,28 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
             "Waiting for prometheus relation to be created"
         )
 
-    @patch("charm.PrometheusConfigurerOperatorCharm.model")
     @patch("charm.AlertRulesDirWatcher", Mock())
     def test_given_prometheus_relation_created_but_prometheus_configurer_container_not_yet_ready_when_pebble_ready_then_charm_goes_to_waiting_state(  # noqa: E501
-        self, patched_relations_created
+        self,
     ):
-        patched_relations_created.return_value = True
+        self.harness.add_relation("prometheus", "prometheus-k8s")
         testing.SIMULATE_CAN_CONNECT = False
         self.harness.container_pebble_ready("prometheus-configurer")
 
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for prometheus-configurer container to be ready"
+        )
+
+    @patch("charm.AlertRulesDirWatcher", Mock())
+    def test_given_prometheus_relation_created_and_prometheus_configurer_container_ready_but_dummy_http_server_not_yet_ready_when_pebble_ready_then_charm_goes_to_waiting_state(  # noqa: E501
+        self,
+    ):
+        self.harness.add_relation("prometheus", "prometheus-k8s")
+        self.harness.set_can_connect("dummy-http-server", True)
+        self.harness.container_pebble_ready("prometheus-configurer")
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for the dummy HTTP server to be ready"
         )
 
     @patch("charm.PrometheusConfigurerOperatorCharm.RULES_DIR", new_callable=PropertyMock)
@@ -76,30 +87,32 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         new_callable=PropertyMock,
     )
     @patch(
-        "charm.PrometheusConfigurerOperatorCharm._prometheus_server_host",
+        "charm.PrometheusConfigurerOperatorCharm.DUMMY_HTTP_SERVER_HOST",
         new_callable=PropertyMock,
     )
     @patch(
-        "charm.PrometheusConfigurerOperatorCharm._prometheus_server_port",
+        "charm.PrometheusConfigurerOperatorCharm.DUMMY_HTTP_SERVER_PORT",
         new_callable=PropertyMock,
     )
     @patch("charm.AlertRulesDirWatcher", Mock())
     def test_given_prometheus_relation_created_and_prometheus_configurer_container_ready_when_pebble_ready_then_pebble_plan_is_updated_with_correct_pebble_layer(  # noqa: E501
         self,
-        patched_prometheus_server_port,
-        patched_prometheus_server_host,
+        patched_dummy_http_server_port,
+        patched_dummy_http_server_host,
         patched_prometheus_configurer_port,
         patched_rules_dir,
     ):
-        test_prometheus_server_port = 4321
-        test_prometheus_server_host = "testhost"
+        test_dummy_http_server_port = 4321
+        test_dummy_http_server_host = "testhost"
         test_prometheus_configurer_port = 1234
         test_rules_dir = "/test/rules/dir"
-        patched_prometheus_server_port.return_value = test_prometheus_server_port
-        patched_prometheus_server_host.return_value = test_prometheus_server_host
+        patched_dummy_http_server_port.return_value = test_dummy_http_server_port
+        patched_dummy_http_server_host.return_value = test_dummy_http_server_host
         patched_prometheus_configurer_port.return_value = test_prometheus_configurer_port
         patched_rules_dir.return_value = test_rules_dir
         self.harness.add_relation("prometheus", "prometheus-k8s")
+        self.harness.set_can_connect("dummy-http-server", True)
+        self.harness.container_pebble_ready("dummy-http-server")
         expected_plan = {
             "services": {
                 "prometheus-configurer": {
@@ -108,12 +121,13 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
                     "command": "prometheus_configurer "
                     f"-port={test_prometheus_configurer_port} "
                     f"-rules-dir={test_rules_dir}/ "
-                    f"-prometheusURL={test_prometheus_server_host}:{test_prometheus_server_port} "
+                    f"-prometheusURL={test_dummy_http_server_host}:{test_dummy_http_server_port} "
                     f"-multitenant-label={TEST_MULTITENANT_LABEL} "
                     "-restrict-queries",
                 }
             }
         }
+
         self.harness.container_pebble_ready("prometheus-configurer")
 
         updated_plan = self.harness.get_container_pebble_plan("prometheus-configurer").to_dict()
@@ -136,12 +150,13 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("dummy-http-server").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch("charm.PrometheusConfigurerOperatorCharm.model")
     @patch("charm.AlertRulesDirWatcher", Mock())
     def test_given_prometheus_relation_created_and_prometheus_configurer_container_ready_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
-        self, patched_relations_created
+        self,
     ):
-        patched_relations_created.return_value = True
+        self.harness.add_relation("prometheus", "prometheus-k8s")
+        self.harness.set_can_connect("dummy-http-server", True)
+        self.harness.container_pebble_ready("dummy-http-server")
 
         self.harness.container_pebble_ready("prometheus-configurer")
 

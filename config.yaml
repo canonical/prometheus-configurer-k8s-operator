@@ -1,10 +1,4 @@
 options:
-  prometheus_server_host:
-    type: string
-    default: ""
-  prometheus_server_port:
-    type: int
-    default:
   multitenant_label:
     type: string
     description: |
