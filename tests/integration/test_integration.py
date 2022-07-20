@@ -34,9 +34,9 @@ class TestPrometheusConfigurerOperatorCharm:
             f"{PROMETHEUS_CONFIGURER_APP_NAME}-image": METADATA["resources"][
                 f"{PROMETHEUS_CONFIGURER_APP_NAME}-image"
             ]["upstream-source"],
-            "dummy-http-server-image": METADATA["resources"][
-                "dummy-http-server-image"
-            ]["upstream-source"],
+            "dummy-http-server-image": METADATA["resources"]["dummy-http-server-image"][
+                "upstream-source"
+            ],
         }
         await ops_test.model.deploy(
             charm, resources=resources, application_name=PROMETHEUS_CONFIGURER_APP_NAME, trust=True
