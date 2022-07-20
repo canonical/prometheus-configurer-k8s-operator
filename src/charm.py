@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class PrometheusConfigurerOperatorCharm(CharmBase):
     RULES_DIR = "/etc/prometheus/rules"
     DUMMY_HTTP_SERVER_HOST = "localhost"
-    DUMMY_HTTP_SERVER_PORT = 8080
+    DUMMY_HTTP_SERVER_PORT = 80
     PROMETHEUS_CONFIGURER_PORT = 9100
 
     on = AlertRulesChangedCharmEvents()

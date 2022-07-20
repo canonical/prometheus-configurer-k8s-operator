@@ -18,7 +18,7 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PROMETHEUS_CONFIGURER_APP_NAME = METADATA["name"]
 PROMETHEUS_APP_NAME = PROMETHEUS_CHARM_NAME = "prometheus-k8s"
 WAIT_FOR_STATUS_TIMEOUT = 1 * 60
-DUMMY_HTTP_SERVER_PORT = 8080
+DUMMY_HTTP_SERVER_PORT = 80
 TEST_TENANT = "test_tenant"
 TEST_ALERT_NAME = "CPUOverUse"
 
@@ -33,6 +33,9 @@ class TestPrometheusConfigurerOperatorCharm:
         resources = {
             f"{PROMETHEUS_CONFIGURER_APP_NAME}-image": METADATA["resources"][
                 f"{PROMETHEUS_CONFIGURER_APP_NAME}-image"
+            ]["upstream-source"],
+            "dummy-http-server-image": METADATA["resources"][
+                "dummy-http-server-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
