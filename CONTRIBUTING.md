@@ -59,7 +59,8 @@ which will create a `*.charm` file you can deploy with:
 
 ```shell
 juju deploy ./prometheus-configurer-k8s_ubuntu-20.04-amd64.charm \
-  --resource prometheus-configurer-image=docker.io/facebookincubator/prometheus-configurer:1.0.4
+  --resource prometheus-configurer-image=docker.io/facebookincubator/prometheus-configurer:1.0.4 \
+  --resource dummy-http-server-image=ghcr.io/canonical/200-ok:main
 ```
 
 [test harness]: https://ops.readthedocs.io/en/latest/#module-ops.testing

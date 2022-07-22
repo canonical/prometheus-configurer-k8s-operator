@@ -23,6 +23,10 @@ containers:
   dummy-http-server:
     resource: dummy-http-server-image
 
+provides:
+  prometheus-configurer:
+    interface: prometheus-configurer
+
 requires:
   prometheus:
     interface: prometheus_remote_write
