@@ -1,0 +1,43 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: prometheus-configurer-k8s
+summary: Prometheus Configurer
+description: |
+  The Prometheus Configurer Charmed Operator provides an HTTP-based API for managing Prometheus 
+  alerting rules.
+  
+  Juju charm in this repository has been designed to supplement prometheus-k8s charm. It leverages 
+  the `prometheus_remote_write` interface, provided by the prometheus-k8s, to send over 
+  the alerting rules to the Prometheus Server inside the Juju relation data bag.
+  
+  Full description of the API is available in 
+  https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger.yaml.
+
+containers:
+  prometheus-configurer:
+    resource: prometheus-configurer-k8s-image
+    mounts:
+      - storage: rules
+        location: /etc/prometheus/rules
+  dummy-http-server:
+    resource: dummy-http-server-image
+
+requires:
+  prometheus:
+    interface: prometheus_remote_write
+
+storage:
+  rules:
+    location: /etc/prometheus/rules
+    type: filesystem
+
+resources:
+  prometheus-configurer-k8s-image:
+    type: oci-image
+    description: Container image for Prometheus Configurer
+    upstream-source: docker.io/facebookincubator/prometheus-configurer:1.0.4
+  dummy-http-server-image:
+    type: oci-image
+    description: Container image for the dummy HTTP server
+    upstream-source: ghcr.io/canonical/200-ok:main
