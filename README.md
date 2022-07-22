@@ -2,12 +2,12 @@
 
 ## Description
 
-The Prometheus Configurer Charmed Operator provides an HTTP-based API for managing 
+The Prometheus Configurer Charmed Operator provides an HTTP-based API for managing
 [Prometheus](https://prometheus.io) alerting rules.
 
-[Juju](https://juju.is/) charm in this repository has been designed to supplement 
-[prometheus-k8s] charm. It leverages the `prometheus_remote_write` interface, provided by the 
-[prometheus-k8s], to send over the alerting rules to the Prometheus Server inside the 
+[Juju](https://juju.is/) charm in this repository has been designed to supplement
+[prometheus-k8s] charm. It leverages the `prometheus_remote_write` interface, provided by the
+[prometheus-k8s], to send over the alerting rules to the Prometheus Server inside the
 [Juju](https://juju.is/) relation data bag.
 
 Full description of the API is available in [github].
@@ -58,7 +58,7 @@ annotations:
 Adding above rule using Prometheus Configurer can be done by running below POST:
 
 ```bash
-curl -X POST http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/alert 
+curl -X POST http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/v1/<TENANT_ID>/alert 
   -H 'Content-Type: application/json' 
   -d '{"alert": "CPUOverUse", "expr": "process_cpu_seconds_total > 0.12", "for": "0m", "labels": {"severity": "Low"}, "annotations": {"summary": "Rule summary.", "description": "Rule description."}}'
 ```
@@ -66,15 +66,16 @@ curl -X POST http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/alert
 To get tenant's alert rules:
 
 ```bash
-curl -X GET http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/alert
+curl -X GET http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/v1/<TENANT_ID>/alert
 ```
 
 To delete tenant's alert rule:
 
 ```bash
-curl -X DELETE http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/<TENANT_ID>/alert?alert_name=<RULE_NAME>
+curl -X DELETE http://<PROMETHEUS CONFIGURER CHARM UNIT IP>:9100/v1/<TENANT_ID>/alert/<ALERT_NAME>
 ```
 
 ## OCI Images
 
 - [facebookincubator/prometheus-configurer](https://hub.docker.com/r/facebookincubator/prometheus-configurer)
+- [canonical/200-ok](https://github.com/canonical/200-ok/pkgs/container/200-ok)
