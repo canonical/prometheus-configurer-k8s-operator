@@ -5,7 +5,7 @@
 The Prometheus Configurer Charmed Operator provides an HTTP-based API for managing
 [Prometheus](https://prometheus.io) alerting rules.
 
-[Juju](https://juju.is/) charm in this repository has been designed to supplement
+This charm has been designed to supplement the
 [prometheus-k8s] charm. It leverages the `prometheus_remote_write` interface, provided by the
 [prometheus-k8s], to send over the alerting rules to the Prometheus Server inside the
 [Juju](https://juju.is/) relation data bag.
