@@ -164,9 +164,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
         prometheus_configurer_relation.data[self.app][
             "service_name"
         ] = self.PROMETHEUS_CONFIGURER_SERVICE_NAME
-        prometheus_configurer_relation.data[self.app][
-            "port"
-        ] = self.PROMETHEUS_CONFIGURER_PORT
+        prometheus_configurer_relation.data[self.app]["port"] = self.PROMETHEUS_CONFIGURER_PORT
         print(prometheus_configurer_relation.data)
 
     @property
@@ -185,12 +183,12 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                         "override": "replace",
                         "startup": "enabled",
                         "command": "prometheus_configurer "
-                                   f"-port={str(self.PROMETHEUS_CONFIGURER_PORT)} "
-                                   f"-rules-dir={self.RULES_DIR}/ "
-                                   "-prometheusURL="
-                                   f"{self.DUMMY_HTTP_SERVER_HOST}:{self.DUMMY_HTTP_SERVER_PORT} "
-                                   f'-multitenant-label={self.model.config.get("multitenant_label")} '
-                                   "-restrict-queries",
+                        f"-port={str(self.PROMETHEUS_CONFIGURER_PORT)} "
+                        f"-rules-dir={self.RULES_DIR}/ "
+                        "-prometheusURL="
+                        f"{self.DUMMY_HTTP_SERVER_HOST}:{self.DUMMY_HTTP_SERVER_PORT} "
+                        f'-multitenant-label={self.model.config.get("multitenant_label")} '
+                        "-restrict-queries",
                     }
                 },
             }
