@@ -183,3 +183,33 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
             ],
             json.dumps(alert_rules_as_dict),
         )
+
+    @patch(
+        "charm.PrometheusConfigurerOperatorCharm.PROMETHEUS_CONFIGURER_SERVICE_NAME",
+        new_callable=PropertyMock,
+    )
+    @patch(
+        "charm.PrometheusConfigurerOperatorCharm.PROMETHEUS_CONFIGURER_PORT",
+        new_callable=PropertyMock,
+    )
+    def test_given_prometheus_configurer_service_when_prometheus_configurer_relation_joined_then_prometheus_configurer_service_name_and_port_are_pushed_to_the_relation_data_bag(  # noqa: E501
+        self, patched_prometheus_configurer_port, patched_prometheus_configurer_service_name
+    ):
+        test_prometheus_configurer_service_name = "whatever"
+        test_prometheus_configurer_port = "1234"
+        patched_prometheus_configurer_service_name.return_value = (
+            test_prometheus_configurer_service_name
+        )
+        patched_prometheus_configurer_port.return_value = test_prometheus_configurer_port
+        relation_id = self.harness.add_relation(
+            "prometheus-configurer", self.harness.charm.app.name
+        )
+        self.harness.add_relation_unit(relation_id, f"{self.harness.charm.app.name}/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, f"{self.harness.charm.app.name}"),
+            {
+                "service_name": test_prometheus_configurer_service_name,
+                "port": test_prometheus_configurer_port,
+            },
+        )

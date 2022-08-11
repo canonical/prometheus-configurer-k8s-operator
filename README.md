@@ -13,7 +13,7 @@ This charm has been designed to supplement the
 Full description of the API is available in [github].
 
 [prometheus-k8s]: https://github.com/canonical/prometheus-k8s-operator
-[github]: https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger.yaml
+[github]: https://github.com/facebookarchive/prometheus-configmanager/blob/main/prometheus/docs/swagger-v1.yml
 
 ## Usage
 
