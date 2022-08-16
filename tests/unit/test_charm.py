@@ -196,7 +196,7 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
         self, patched_prometheus_configurer_port, patched_prometheus_configurer_service_name
     ):
         test_prometheus_configurer_service_name = "whatever"
-        test_prometheus_configurer_port = "1234"
+        test_prometheus_configurer_port = 1234
         patched_prometheus_configurer_service_name.return_value = (
             test_prometheus_configurer_service_name
         )
@@ -210,6 +210,6 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
             self.harness.get_relation_data(relation_id, f"{self.harness.charm.app.name}"),
             {
                 "service_name": test_prometheus_configurer_service_name,
-                "port": test_prometheus_configurer_port,
+                "port": str(test_prometheus_configurer_port),
             },
         )
