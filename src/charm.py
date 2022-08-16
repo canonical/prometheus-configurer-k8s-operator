@@ -164,7 +164,9 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
         prometheus_configurer_relation.data[self.app][
             "service_name"
         ] = self.PROMETHEUS_CONFIGURER_SERVICE_NAME
-        prometheus_configurer_relation.data[self.app]["port"] = self.PROMETHEUS_CONFIGURER_PORT
+        prometheus_configurer_relation.data[self.app]["port"] = str(
+            self.PROMETHEUS_CONFIGURER_PORT
+        )
 
     @property
     def _prometheus_configurer_layer(self) -> Layer:
