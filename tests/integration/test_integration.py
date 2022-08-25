@@ -111,12 +111,12 @@ class TestPrometheusConfigurerOperatorCharm:
                 "juju_charm": f"{PROMETHEUS_CONFIGURER_APP_NAME}",
                 "juju_model": f"{model_name}",
                 "juju_model_uuid": f"{model_uuid}",
-                "networkID": f"{TEST_TENANT}",
                 "severity": "Low",
+                "tenant": f"{TEST_TENANT}",
             },
             "lastEvaluation": "0001-01-01T00:00:00Z",
             "name": f"{TEST_ALERT_NAME}",
-            "query": f'process_cpu_seconds_total{{juju_application="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_charm="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_model="{model_name}",juju_model_uuid="{model_uuid}",networkID="{TEST_TENANT}"}} '  # noqa: E501
+            "query": f'process_cpu_seconds_total{{juju_application="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_charm="{PROMETHEUS_CONFIGURER_APP_NAME}",juju_model="{model_name}",juju_model_uuid="{model_uuid}",tenant="{TEST_TENANT}"}} '  # noqa: E501
             "> 0.12",
             "state": "inactive",
             "type": "alerting",
@@ -144,9 +144,9 @@ class TestPrometheusConfigurerOperatorCharm:
         )
         expected_response = {
             "alert": f"{TEST_ALERT_NAME}",
-            "expr": f'process_cpu_seconds_total{{networkID="{TEST_TENANT}"}} > 0.12',
+            "expr": f'process_cpu_seconds_total{{tenant="{TEST_TENANT}"}} > 0.12',
             "for": "0s",
-            "labels": {"networkID": f"{TEST_TENANT}", "severity": "Low"},
+            "labels": {"tenant": f"{TEST_TENANT}", "severity": "Low"},
             "annotations": {"description": "Rule description.", "summary": "Rule summary."},
         }
 

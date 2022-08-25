@@ -123,8 +123,8 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
                     f"-port={test_prometheus_configurer_port} "
                     f"-rules-dir={test_rules_dir}/ "
                     f"-prometheusURL={test_dummy_http_server_host}:{test_dummy_http_server_port} "
-                    f"-multitenant-label={TEST_MULTITENANT_LABEL} "
-                    "-restrict-queries",
+                    "-restrict-queries "
+                    f"-multitenant-label={TEST_MULTITENANT_LABEL}",
                 }
             }
         }

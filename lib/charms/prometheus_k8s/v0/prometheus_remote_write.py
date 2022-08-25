@@ -36,7 +36,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 
 logger = logging.getLogger(__name__)
@@ -63,10 +63,10 @@ class RelationInterfaceMismatchError(Exception):
     """Raised if the relation with the given name has a different interface."""
 
     def __init__(
-            self,
-            relation_name: str,
-            expected_relation_interface: str,
-            actual_relation_interface: str,
+        self,
+        relation_name: str,
+        expected_relation_interface: str,
+        actual_relation_interface: str,
     ):
         self.relation_name = relation_name
         self.expected_relation_interface = expected_relation_interface
@@ -84,10 +84,10 @@ class RelationRoleMismatchError(Exception):
     """Raised if the relation with the given name has a different direction."""
 
     def __init__(
-            self,
-            relation_name: str,
-            expected_relation_role: RelationRole,
-            actual_relation_role: RelationRole,
+        self,
+        relation_name: str,
+        expected_relation_role: RelationRole,
+        actual_relation_role: RelationRole,
     ):
         self.relation_name = relation_name
         self.expected_relation_interface = expected_relation_role
@@ -282,14 +282,14 @@ class AlertRules:
 
     def _is_already_modified(self, name: str) -> bool:
         """Detect whether a group name has already been modified with juju topology."""
-        modified_matcher = re.compile(r"^.*?_[\da-f]{8}-([\da-f]{4}-){3}[\da-f]{12}_.*?alerts$")
+        modified_matcher = re.compile(r"^.*?_[\da-f]{8}_.*?alerts$")
         if modified_matcher.match(name) is not None:
             return True
         return False
 
     @classmethod
     def _multi_suffix_glob(
-            cls, dir_path: Path, suffixes: List[str], recursive: bool = True
+        cls, dir_path: Path, suffixes: List[str], recursive: bool = True
     ) -> list:
         """Helper function for getting all files in a directory that have a matching suffix.
 
@@ -363,10 +363,10 @@ class AlertRules:
 
 
 def _validate_relation_by_interface_and_direction(
-        charm: CharmBase,
-        relation_name: str,
-        expected_relation_interface: str,
-        expected_relation_role: RelationRole,
+    charm: CharmBase,
+    relation_name: str,
+    expected_relation_interface: str,
+    expected_relation_role: RelationRole,
 ):
     """Verifies that a relation has the necessary characteristics.
 
@@ -438,9 +438,9 @@ class InvalidAlertRulePathError(Exception):
     """Raised if the alert rules folder cannot be found or is otherwise invalid."""
 
     def __init__(
-            self,
-            alert_rules_absolute_path: str,
-            message: str,
+        self,
+        alert_rules_absolute_path: str,
+        message: str,
     ):
         self.alert_rules_absolute_path = alert_rules_absolute_path
         self.message = message
@@ -583,10 +583,10 @@ class PrometheusRemoteWriteConsumer(Object):
     on = PrometheusRemoteWriteConsumerEvents()
 
     def __init__(
-            self,
-            charm: CharmBase,
-            relation_name: str = DEFAULT_CONSUMER_NAME,
-            alert_rules_path: str = DEFAULT_ALERT_RULES_RELATIVE_PATH,
+        self,
+        charm: CharmBase,
+        relation_name: str = DEFAULT_CONSUMER_NAME,
+        alert_rules_path: str = DEFAULT_ALERT_RULES_RELATIVE_PATH,
     ):
         """API to manage a required relation with the `prometheus_remote_write` interface.
 
@@ -747,13 +747,13 @@ class PrometheusRemoteWriteProvider(Object):
     """
 
     def __init__(
-            self,
-            charm: CharmBase,
-            relation_name: str = DEFAULT_RELATION_NAME,
-            endpoint_schema: str = "http",
-            endpoint_address: str = "",
-            endpoint_port: Union[str, int] = 9090,
-            endpoint_path: str = "/api/v1/write",
+        self,
+        charm: CharmBase,
+        relation_name: str = DEFAULT_RELATION_NAME,
+        endpoint_schema: str = "http",
+        endpoint_address: str = "",
+        endpoint_port: Union[str, int] = 9090,
+        endpoint_path: str = "/api/v1/write",
     ):
         """API to manage a provided relation with the `prometheus_remote_write` interface.
 
@@ -892,14 +892,39 @@ class PrometheusRemoteWriteProvider(Object):
                 continue
             # Construct an ID based on what's in the alert rules
             error_messages = []
+            tool = CosTool(self._charm)
             for group in alert_rules["groups"]:
+
+                # Copy off rules so we don't modify an object we're iterating over
+                rules = group["rules"]
+                for idx, alert_rule in enumerate(rules):
+                    labels = alert_rule.get("labels")
+
+                    if labels:
+                        topology = JujuTopology(
+                            model=labels.get("juju_model", ""),
+                            model_uuid=labels.get("juju_model_uuid", ""),
+                            application=labels.get("juju_application", ""),
+                            unit=labels.get("juju_unit", ""),
+                            charm_name=labels.get("juju_charm", ""),
+                        )
+
+                        # Inject topology and put it back in the list
+                        alert_rule["expr"] = tool.inject_label_matchers(
+                            re.sub(r"%%juju_topology%%,?", "", alert_rule["expr"]),
+                            topology.label_matcher_dict,
+                        )
+
+                        group["rules"][idx] = alert_rule
                 try:
                     labels = group["rules"][0]["labels"]
-                    identifier = "{}_{}_{}".format(
-                        labels["juju_model"],
-                        labels["juju_model_uuid"],
-                        labels["juju_application"],
-                    )
+                    identifier = JujuTopology(
+                        model=labels.get("juju_model", ""),
+                        model_uuid=labels.get("juju_model_uuid", ""),
+                        application=labels.get("juju_application", ""),
+                        unit=labels.get("juju_unit", ""),
+                        charm_name=labels.get("juju_charm", ""),
+                    ).identifier
 
                     _, errmsg = self.tool.validate_alert_rules({"groups": [group]})
 

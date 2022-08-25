@@ -189,13 +189,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                     self._prometheus_configurer_service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "prometheus_configurer "
-                        f"-port={str(self.PROMETHEUS_CONFIGURER_PORT)} "
-                        f"-rules-dir={self.RULES_DIR}/ "
-                        "-prometheusURL="
-                        f"{self.DUMMY_HTTP_SERVER_HOST}:{self.DUMMY_HTTP_SERVER_PORT} "
-                        f'-multitenant-label={self.model.config.get("multitenant_label")} '
-                        "-restrict-queries",
+                        "command": self._prometheus_configurer_service_startup_command,
                     }
                 },
             }
@@ -221,6 +215,20 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                 },
             }
         )
+
+    @property
+    def _prometheus_configurer_service_startup_command(self) -> str:
+        command = (
+            "prometheus_configurer "
+            f"-port={str(self.PROMETHEUS_CONFIGURER_PORT)} "
+            f"-rules-dir={self.RULES_DIR}/ "
+            f"-prometheusURL={self.DUMMY_HTTP_SERVER_HOST}:{self.DUMMY_HTTP_SERVER_PORT} "
+            "-restrict-queries"
+        )
+        multitenant_label = self.model.config.get("multitenant_label")
+        if multitenant_label:
+            command = command + f" -multitenant-label={multitenant_label}"
+        return command
 
     @property
     def _dummy_http_server_running(self) -> bool:
