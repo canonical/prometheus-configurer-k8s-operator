@@ -60,6 +60,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
             ],
         )
 
+        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(
             self.on.prometheus_configurer_pebble_ready,
             self._on_prometheus_configurer_pebble_ready,
@@ -72,6 +73,11 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
             self.on.prometheus_configurer_relation_joined,
             self._on_prometheus_configurer_relation_joined,
         )
+
+    def _on_start(self, _) -> None:
+        """Starts AlertRulesDirWatcher upon unit start."""
+        watchdog = AlertRulesDirWatcher(self, self.RULES_DIR)
+        watchdog.start_watchdog()
 
     def _on_prometheus_configurer_pebble_ready(self, event: PebbleReadyEvent):
         """Checks whether all conditions to start Prometheus Configurer are met and, if yes,

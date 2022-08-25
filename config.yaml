@@ -5,4 +5,4 @@ options:
       Prometheus Configurer has been designed to support multiple tenants. This label can be used
       to restrict the alerting rules in Prometheus, so that each rule can only be triggered by 
       metrics with matching label.
-    default: networkID
+    default: ""

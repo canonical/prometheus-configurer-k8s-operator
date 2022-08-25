@@ -43,7 +43,8 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
     ):
         test_rules_dir = "/test/rules/dir"
         patched_rules_dir.return_value = test_rules_dir
-        self.harness.container_pebble_ready("prometheus-configurer")
+
+        self.harness.charm.on.start.emit()
 
         patched_alert_rules_dir_watcher.assert_called_with(self.harness.charm, test_rules_dir)
 
