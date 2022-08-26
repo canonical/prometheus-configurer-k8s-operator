@@ -5,5 +5,5 @@ options:
       Prometheus Configurer has been designed to support multiple tenants. This label can be used
       to restrict the alerting rules in Prometheus, so that each rule can only be triggered by 
       metrics with matching label. If none is set, Prometheus Configurer's default value 
-      od 'tenant' will be used.
+      of 'tenant' will be used.
     default: ""
