@@ -43,7 +43,8 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
     ):
         test_rules_dir = "/test/rules/dir"
         patched_rules_dir.return_value = test_rules_dir
-        self.harness.container_pebble_ready("prometheus-configurer")
+
+        self.harness.charm.on.start.emit()
 
         patched_alert_rules_dir_watcher.assert_called_with(self.harness.charm, test_rules_dir)
 
@@ -122,8 +123,8 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
                     f"-port={test_prometheus_configurer_port} "
                     f"-rules-dir={test_rules_dir}/ "
                     f"-prometheusURL={test_dummy_http_server_host}:{test_dummy_http_server_port} "
-                    f"-multitenant-label={TEST_MULTITENANT_LABEL} "
-                    "-restrict-queries",
+                    "-restrict-queries "
+                    f"-multitenant-label={TEST_MULTITENANT_LABEL}",
                 }
             }
         }

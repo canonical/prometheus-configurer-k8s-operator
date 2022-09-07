@@ -60,6 +60,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
             ],
         )
 
+        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(
             self.on.prometheus_configurer_pebble_ready,
             self._on_prometheus_configurer_pebble_ready,
@@ -72,6 +73,11 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
             self.on.prometheus_configurer_relation_joined,
             self._on_prometheus_configurer_relation_joined,
         )
+
+    def _on_start(self, _) -> None:
+        """Starts AlertRulesDirWatcher upon unit start."""
+        watchdog = AlertRulesDirWatcher(self, self.RULES_DIR)
+        watchdog.start_watchdog()
 
     def _on_prometheus_configurer_pebble_ready(self, event: PebbleReadyEvent):
         """Checks whether all conditions to start Prometheus Configurer are met and, if yes,
@@ -183,13 +189,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                     self._prometheus_configurer_service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "prometheus_configurer "
-                        f"-port={str(self.PROMETHEUS_CONFIGURER_PORT)} "
-                        f"-rules-dir={self.RULES_DIR}/ "
-                        "-prometheusURL="
-                        f"{self.DUMMY_HTTP_SERVER_HOST}:{self.DUMMY_HTTP_SERVER_PORT} "
-                        f'-multitenant-label={self.model.config.get("multitenant_label")} '
-                        "-restrict-queries",
+                        "command": self._prometheus_configurer_service_startup_command,
                     }
                 },
             }
@@ -215,6 +215,20 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
                 },
             }
         )
+
+    @property
+    def _prometheus_configurer_service_startup_command(self) -> str:
+        command = (
+            "prometheus_configurer "
+            f"-port={str(self.PROMETHEUS_CONFIGURER_PORT)} "
+            f"-rules-dir={self.RULES_DIR}/ "
+            f"-prometheusURL={self.DUMMY_HTTP_SERVER_HOST}:{self.DUMMY_HTTP_SERVER_PORT} "
+            "-restrict-queries"
+        )
+        multitenant_label = self.model.config.get("multitenant_label")
+        if multitenant_label:
+            command = command + f" -multitenant-label={multitenant_label}"
+        return command
 
     @property
     def _dummy_http_server_running(self) -> bool:
