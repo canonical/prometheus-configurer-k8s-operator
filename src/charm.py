@@ -167,9 +167,7 @@ class PrometheusConfigurerOperatorCharm(CharmBase):
             None
         """
         prometheus_configurer_relation = event.relation
-        prometheus_configurer_relation.data[self.app][
-            "service_name"
-        ] = self.PROMETHEUS_CONFIGURER_SERVICE_NAME
+        prometheus_configurer_relation.data[self.app]["service_name"] = self.app.name
         prometheus_configurer_relation.data[self.app]["port"] = str(
             self.PROMETHEUS_CONFIGURER_PORT
         )
