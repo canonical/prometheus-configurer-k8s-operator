@@ -39,7 +39,11 @@ class TestPrometheusConfigurerOperatorCharm:
             ],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=PROMETHEUS_CONFIGURER_APP_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=PROMETHEUS_CONFIGURER_APP_NAME,
+            trust=True,
+            series="focal",
         )
 
     @pytest.mark.abort_on_fail
@@ -192,6 +196,7 @@ class TestPrometheusConfigurerOperatorCharm:
             application_name=PROMETHEUS_APP_NAME,
             channel="edge",
             trust=True,
+            series="focal",
         )
 
 

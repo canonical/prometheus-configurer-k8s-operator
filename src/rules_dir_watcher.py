@@ -17,8 +17,8 @@ import time
 
 from ops.charm import CharmBase, CharmEvents
 from ops.framework import EventBase, EventSource, Object
-from watchdog.events import FileSystemEventHandler  # type: ignore[import]
-from watchdog.observers import Observer  # type: ignore[import]
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 logger = logging.getLogger(__name__)
 
