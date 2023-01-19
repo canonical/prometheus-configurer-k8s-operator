@@ -806,7 +806,7 @@ class PrometheusRemoteWriteProvider(Object):
     def _on_relation_change(self, event: RelationEvent) -> None:
         self.update_endpoint(event.relation)
 
-    def update_endpoint(self, relation: Relation = None) -> None:
+    def update_endpoint(self, relation: Optional[Relation] = None) -> None:
         """Triggers programmatically the update of the relation data.
 
         This method should be used when the charm relying on this library needs
