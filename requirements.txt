@@ -1,5 +1,5 @@
 lightkube >= 0.8.1
 lightkube-models >= 1.22.0.4
-ops==2.0.0rc2
+ops
 PyYAML
 watchdog
