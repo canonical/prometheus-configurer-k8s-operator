@@ -49,8 +49,10 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: microk8s
+
       - name: Run integration tests
         run: tox -e integration
+
       - name: Archive charmcraft logs
         if: failure()
         uses: actions/upload-artifact@v3

@@ -65,7 +65,7 @@ class TestPrometheusConfigurerOperatorCharm:
             relation2="prometheus-k8s:receive-remote-write",
         )
         await ops_test.model.wait_for_idle(
-            apps=[PROMETHEUS_CONFIGURER_APP_NAME],
+            apps=[PROMETHEUS_CONFIGURER_APP_NAME, PROMETHEUS_APP_NAME],
             status="active",
             timeout=WAIT_FOR_STATUS_TIMEOUT,
         )
