@@ -39,7 +39,11 @@ class TestPrometheusConfigurerOperatorCharm:
             ],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=PROMETHEUS_CONFIGURER_APP_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=PROMETHEUS_CONFIGURER_APP_NAME,
+            trust=True,
+            series="focal",
         )
 
     @pytest.mark.abort_on_fail
@@ -61,7 +65,7 @@ class TestPrometheusConfigurerOperatorCharm:
             relation2="prometheus-k8s:receive-remote-write",
         )
         await ops_test.model.wait_for_idle(
-            apps=[PROMETHEUS_CONFIGURER_APP_NAME],
+            apps=[PROMETHEUS_CONFIGURER_APP_NAME, PROMETHEUS_APP_NAME],
             status="active",
             timeout=WAIT_FOR_STATUS_TIMEOUT,
         )
@@ -190,8 +194,9 @@ class TestPrometheusConfigurerOperatorCharm:
         await ops_test.model.deploy(
             PROMETHEUS_APP_NAME,
             application_name=PROMETHEUS_APP_NAME,
-            channel="edge",
+            channel="stable",
             trust=True,
+            series="focal",
         )
 
 
