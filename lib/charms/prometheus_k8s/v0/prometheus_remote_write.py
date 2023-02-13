@@ -4,6 +4,9 @@
 
 This library facilitates the integration of the prometheus_remote_write interface.
 
+Source code can be found on GitHub at:
+ https://github.com/canonical/prometheus-k8s-operator/tree/main/lib/charms/prometheus_k8s
+
 Charms that need to push data to a charm exposing the Prometheus remote_write API,
 should use the `PrometheusRemoteWriteConsumer`. Charms that operate software that exposes
 the Prometheus remote_write API, that is, they can receive metrics data over remote_write,
@@ -18,13 +21,19 @@ import re
 import socket
 import subprocess
 import tempfile
-import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 import yaml
 from charms.observability_libs.v0.juju_topology import JujuTopology
-from ops.charm import CharmBase, HookEvent, RelationEvent, RelationMeta, RelationRole
+from ops.charm import (
+    CharmBase,
+    HookEvent,
+    RelationBrokenEvent,
+    RelationEvent,
+    RelationMeta,
+    RelationRole,
+)
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import Relation
 
@@ -36,7 +45,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 12
 
 
 logger = logging.getLogger(__name__)
@@ -322,7 +331,9 @@ class AlertRules:
         alert_groups = []  # type: List[dict]
 
         # Gather all alerts into a list of groups
-        for file_path in self._multi_suffix_glob(dir_path, [".rule", ".rules", ".yml"], recursive):
+        for file_path in self._multi_suffix_glob(
+            dir_path, [".rule", ".rules", ".yml", ".yaml"], recursive
+        ):
             alert_groups_from_file = self._from_file(dir_path, file_path)
             if alert_groups_from_file:
                 logger.debug("Reading alert rule from %s", file_path)
@@ -505,7 +516,7 @@ class PrometheusRemoteWriteConsumer(Object):
 
     ```
     requires:
-        receive-remote-write:  # Relation name
+        send-remote-write:  # Relation name
             interface: prometheus_remote_write  # Relation interface
     ```
 
@@ -527,7 +538,7 @@ class PrometheusRemoteWriteConsumer(Object):
     metadata settings).
 
     Then, inside the logic of `_handle_endpoints_changed`, the updated endpoint list is
-    retrieved with with:
+    retrieved with:
 
     ```
     self.remote_write_consumer.endpoints
@@ -536,7 +547,7 @@ class PrometheusRemoteWriteConsumer(Object):
     which returns a dictionary structured like the Prometheus configuration object (see
     https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_write).
 
-    Regarding the default relation name, `receive-remote-write`: if you choose to change it,
+    Regarding the default relation name, `send-remote-write`: if you choose to change it,
     you would need to explicitly provide it to the `PrometheusRemoteWriteConsumer` via the
     `relation_name` constructor argument. (The relation interface, on the other hand, is
     fixed and, if you were to change it, your charm would not be able to relate with other
@@ -630,7 +641,7 @@ class PrometheusRemoteWriteConsumer(Object):
         self.framework.observe(on_relation.relation_joined, self._handle_endpoints_changed)
         self.framework.observe(on_relation.relation_changed, self._handle_endpoints_changed)
         self.framework.observe(on_relation.relation_departed, self._handle_endpoints_changed)
-        self.framework.observe(on_relation.relation_broken, self._handle_endpoints_changed)
+        self.framework.observe(on_relation.relation_broken, self._on_relation_broken)
         self.framework.observe(on_relation.relation_joined, self._push_alerts_on_relation_joined)
         self.framework.observe(
             self._charm.on.leader_elected, self._push_alerts_to_all_relation_databags
@@ -638,6 +649,9 @@ class PrometheusRemoteWriteConsumer(Object):
         self.framework.observe(
             self._charm.on.upgrade_charm, self._push_alerts_to_all_relation_databags
         )
+
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
+        self.on.endpoints_changed.emit(relation_id=event.relation.id)
 
     def _handle_endpoints_changed(self, event: RelationEvent) -> None:
         if self._charm.unit.is_leader():
@@ -707,6 +721,33 @@ class PrometheusRemoteWriteConsumer(Object):
         return endpoints
 
 
+class PrometheusRemoteWriteAlertsChangedEvent(EventBase):
+    """Event emitted when Prometheus remote_write alerts change."""
+
+    def __init__(self, handle, relation_id):
+        super().__init__(handle)
+        self.relation_id = relation_id
+
+    def snapshot(self):
+        """Save Prometheus remote_write information."""
+        return {"relation_id": self.relation_id}
+
+    def restore(self, snapshot):
+        """Restore Prometheus remote_write information."""
+        self.relation_id = snapshot["relation_id"]
+
+
+class PrometheusRemoteWriteProviderConsumersChangedEvent(EventBase):
+    """Event emitted when Prometheus remote_write alerts change."""
+
+
+class PrometheusRemoteWriteProviderEvents(ObjectEvents):
+    """Event descriptor for events raised by `PrometheusRemoteWriteProvider`."""
+
+    alert_rules_changed = EventSource(PrometheusRemoteWriteAlertsChangedEvent)
+    consumers_changed = EventSource(PrometheusRemoteWriteProviderConsumersChangedEvent)
+
+
 class PrometheusRemoteWriteProvider(Object):
     """API that manages a provided `prometheus_remote_write` relation.
 
@@ -745,6 +786,8 @@ class PrometheusRemoteWriteProvider(Object):
     relation using the `prometheus_remote_write` interface, in which case changing the relation
     name to differentiate between "incoming" and "outgoing" remote write interactions is necessary.
     """
+
+    on = PrometheusRemoteWriteProviderEvents()
 
     def __init__(
         self,
@@ -796,22 +839,32 @@ class PrometheusRemoteWriteProvider(Object):
         on_relation = self._charm.on[self._relation_name]
         self.framework.observe(
             on_relation.relation_created,
-            self._on_relation_change,
+            self._on_consumers_changed,
         )
         self.framework.observe(
             on_relation.relation_joined,
-            self._on_relation_change,
+            self._on_consumers_changed,
+        )
+        self.framework.observe(
+            on_relation.relation_changed,
+            self._on_relation_changed,
         )
 
-    def _on_relation_change(self, event: RelationEvent) -> None:
-        self.update_endpoint(event.relation)
+    def _on_consumers_changed(self, event: RelationEvent) -> None:
+        if not isinstance(event, RelationBrokenEvent):
+            self.update_endpoint(event.relation)
+        self.on.consumers_changed.emit()
+
+    def _on_relation_changed(self, event: RelationEvent) -> None:
+        """Flag Providers that data has changed so they can re-read alerts."""
+        self.on.alert_rules_changed.emit(event.relation.id)
 
     def update_endpoint(self, relation: Optional[Relation] = None) -> None:
         """Triggers programmatically the update of the relation data.
 
         This method should be used when the charm relying on this library needs
         to update the relation data in response to something occurring outside
-        of the `prometheus_remote_write` relation lifecycle, e.g., in case of a
+        the `prometheus_remote_write` relation lifecycle, e.g., in case of a
         host address change because the charmed operator becomes connected to an
         Ingress after the `prometheus_remote_write` relation is established.
 
@@ -855,9 +908,9 @@ class PrometheusRemoteWriteProvider(Object):
         executed. This method returns all the alert rules provided by each
         related metrics provider charm. These rules may be used to generate a
         separate alert rules file for each relation since the returned list
-        of alert groups are indexed by relation ID. Also for each relation ID
+        of alert groups are indexed by relation ID. Also, for each relation ID
         associated scrape metadata such as Juju model, UUID and application
-        name are provided so the a unique name may be generated for the rules
+        name are provided so the unique name may be generated for the rules
         file. For each relation the structure of data returned is a dictionary
         with four keys
 
@@ -869,7 +922,7 @@ class PrometheusRemoteWriteProvider(Object):
         The value of the `groups` key is such that it may be used to generate
         a Prometheus alert rules file directly using `yaml.dump` but the
         `groups` key itself must be included as this is required by Prometheus,
-        for example as in `yaml.dump({"groups": alerts["groups"]})`.
+        for example as in `yaml.safe_dump({"groups": alerts["groups"]})`.
 
         The `PrometheusRemoteWriteProvider` accepts a list of rules and these
         rules are all placed into one group.
@@ -894,8 +947,7 @@ class PrometheusRemoteWriteProvider(Object):
             error_messages = []
             tool = CosTool(self._charm)
             for group in alert_rules["groups"]:
-
-                # Copy off rules so we don't modify an object we're iterating over
+                # Copy off rules, so we don't modify an object we're iterating over
                 rules = group["rules"]
                 for idx, alert_rule in enumerate(rules):
                     labels = alert_rule.get("labels")
@@ -993,28 +1045,13 @@ class CosTool:
         return rules
 
     def validate_alert_rules(self, rules: dict) -> Tuple[bool, str]:
-        """Will validate correctness alert rules, returning a boolean and any errors."""
+        """Will validate correctness of alert rules, returning a boolean and any errors."""
         if not self.path:
             logger.debug("`cos-tool` unavailable. Not validating alert correctness.")
             return True, ""
 
         with tempfile.TemporaryDirectory() as tmpdir:
             rule_path = Path(tmpdir + "/validate_rule.yaml")
-
-            # Smash "our" rules format into what upstream actually uses, which is more like:
-            #
-            # groups:
-            #   - name: foo
-            #     rules:
-            #       - alert: SomeAlert
-            #         expr: up
-            #       - alert: OtherAlert
-            #         expr: up
-            transformed_rules = {"groups": []}  # type: ignore
-            for rule in rules["groups"]:
-                transformed = {"name": str(uuid.uuid4()), "rules": [rule]}
-                transformed_rules["groups"].append(transformed)
-
             rule_path.write_text(yaml.dump(rules))
 
             args = [str(self.path), "validate", str(rule_path)]
@@ -1024,9 +1061,15 @@ class CosTool:
                 return True, ""
             except subprocess.CalledProcessError as e:
                 logger.debug("Validating the rules failed: %s", e.output)
-                return False, ", ".join([line for line in e.output if "error validating" in line])
+                return False, ", ".join(
+                    [
+                        line
+                        for line in e.output.decode("utf8").splitlines()
+                        if "error validating" in line
+                    ]
+                )
 
-    def inject_label_matchers(self, expression, topology):
+    def inject_label_matchers(self, expression, topology) -> str:
         """Add label matchers to an expression."""
         if not topology:
             return expression
@@ -1042,7 +1085,7 @@ class CosTool:
         # noinspection PyBroadException
         try:
             return self._exec(args)
-        except Exception as e:
+        except subprocess.CalledProcessError as e:
             logger.debug('Applying the expression failed: "%s", falling back to the original', e)
             return expression
 
@@ -1060,7 +1103,6 @@ class CosTool:
             logger.debug('Could not locate cos-tool at: "{}"'.format(res))
         return None
 
-    def _exec(self, cmd):
-        result = subprocess.run(cmd, check=False, stdout=subprocess.PIPE)
-        output = result.stdout.decode("utf-8").strip()
-        return output
+    def _exec(self, cmd) -> str:
+        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        return result.stdout.decode("utf-8").strip()

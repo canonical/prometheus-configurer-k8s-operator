@@ -11,7 +11,7 @@ jobs:
     name: Charmhub upload
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Check libraries
         uses: canonical/charming-actions/check-libraries@2.2.2
