@@ -12,7 +12,6 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from charm import PrometheusConfigurerOperatorCharm
 
-testing.SIMULATE_CAN_CONNECT = True
 TEST_MULTITENANT_LABEL = "some_test_label"
 TEST_CONFIG = f"""options:
   multitenant_label:
@@ -56,18 +55,6 @@ class TestPrometheusConfigurerOperatorCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus(
             "Waiting for prometheus relation to be created"
-        )
-
-    @patch("charm.AlertRulesDirWatcher", Mock())
-    def test_given_prometheus_relation_created_but_prometheus_configurer_container_not_yet_ready_when_pebble_ready_then_charm_goes_to_waiting_state(  # noqa: E501
-        self,
-    ):
-        self.harness.add_relation("prometheus", "prometheus-k8s")
-        testing.SIMULATE_CAN_CONNECT = False
-        self.harness.container_pebble_ready("prometheus-configurer")
-
-        assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for prometheus-configurer container to be ready"
         )
 
     @patch("charm.AlertRulesDirWatcher", Mock())

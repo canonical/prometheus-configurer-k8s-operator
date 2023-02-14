@@ -19,6 +19,8 @@ Full description of the API is available in [github].
 
 ### Deployment
 
+> **NOTE**: This charm is only compatible with Juju 3.x!
+ 
 The Prometheus Configurer Charmed Operator may be deployed using the Juju command line as in:
 
 ```bash

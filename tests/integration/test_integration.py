@@ -190,7 +190,6 @@ class TestPrometheusConfigurerOperatorCharm:
         await ops_test.model.deploy(
             PROMETHEUS_APP_NAME,
             application_name=PROMETHEUS_APP_NAME,
-            channel="edge",
             trust=True,
         )
 
