@@ -51,7 +51,7 @@ class AlertRulesDirWatcher(Object):
             new_env.pop("JUJU_CONTEXT_ID")
 
         pid = subprocess.Popen(
-            [
+            args=[
                 "/usr/bin/python3",
                 "src/rules_dir_watcher.py",
                 self._rules_dir,
