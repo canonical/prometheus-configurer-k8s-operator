@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 from ops.charm import CharmBase, CharmEvents
 from ops.framework import EventBase, EventSource, Object
@@ -50,12 +51,15 @@ class AlertRulesDirWatcher(Object):
         if "JUJU_CONTEXT_ID" in new_env:
             new_env.pop("JUJU_CONTEXT_ID")
 
+        juju_bin = (
+            "/usr/bin/juju-exec" if Path("/usr/bin/juju-exec").exists() else "/usr/bin/juju-run"
+        )
         pid = subprocess.Popen(
             args=[
                 "/usr/bin/python3",
                 "src/rules_dir_watcher.py",
                 self._rules_dir,
-                "/usr/bin/juju-exec",
+                juju_bin,
                 self._charm.unit.name,
                 self._charm.charm_dir,
             ],
