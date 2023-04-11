@@ -39,7 +39,11 @@ class TestPrometheusConfigurerOperatorCharm:
             ],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=PROMETHEUS_CONFIGURER_APP_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=PROMETHEUS_CONFIGURER_APP_NAME,
+            series="jammy",
+            trust=True,
         )
 
     @pytest.mark.abort_on_fail
