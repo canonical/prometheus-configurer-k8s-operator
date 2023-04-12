@@ -77,7 +77,7 @@ jobs:
     if: ${{ github.ref_name == 'main' && github.event.schedule != ''}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install charmcraft
         run: sudo snap install charmcraft --classic
       - name: Fetch Tested Charm
